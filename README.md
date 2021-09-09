@@ -1,4 +1,4 @@
-![DynamoDB Metrics](https://www.sensedeep.com/images/dynamodb-metrics.png)
+![DynamoDB Metrics](https://www.sensedeep.com/images/metrics-logo.png)
 
 [![Build Status](https://img.shields.io/github/workflow/status/sensedeep/dynamodb-metrics/build)](https://img.shields.io/github/workflow/status/sensedeep/dynamodb-metrics/build)
 [![npm](https://img.shields.io/npm/v/dynamodb-metrics.svg)](https://www.npmjs.com/package/dynamodb-metrics)
