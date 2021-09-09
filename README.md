@@ -1,11 +1,12 @@
 ![DynamoDB Metrics](https://www.sensedeep.com/images/metrics-logo.png)
 
+**DynamoDB Single Table Metrics**
+
 [![Build Status](https://img.shields.io/github/workflow/status/sensedeep/dynamodb-metrics/build)](https://img.shields.io/github/workflow/status/sensedeep/dynamodb-metrics/build)
 [![npm](https://img.shields.io/npm/v/dynamodb-metrics.svg)](https://www.npmjs.com/package/dynamodb-metrics)
 [![npm](https://img.shields.io/npm/l/dynamodb-metrics.svg)](https://www.npmjs.com/package/dynamodb-metrics)
 [![Coverage Status](https://coveralls.io/repos/github/sensedeep/dynamodb-metrics/badge.svg?branch=main)](https://coveralls.io/github/sensedeep/dynamodb-metrics?branch=main)
 
-**DynamoDB Single Table Metrics**
 
 DynamoDB Metrics is a library to capture and emit single table CloudWatch metrics.
 
@@ -17,6 +18,9 @@ If you've wondered:
 * Which single-table entity/model is most loaded and consuming RCU/WCU.
 * Which queries are the most inefficient (items vs scanned).
 * Who is doing scans (app, function, model).
+
+DynamoDB metrics was created for those who have existing code bases using DynamoDB and single-table design patterns and for whom using
+[OneTable](https://github.com/sensedeep/dynamodb-onetable) would require a significant rewrite. It emits metrics that are compatible with those emited by OneTable.
 
 ## DynamoDB Metrics Features
 
