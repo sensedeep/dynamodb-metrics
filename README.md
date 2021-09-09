@@ -109,7 +109,7 @@ The Source dimension is defined via the `Metric` constructor `source` parameter.
 
 The Index dimension is set to `primary` for the primary index and to the name of a Global Secondary Index (GSI) is that is being used.
 
-The Model is the single-table entity name. Read [DynamoDB Single Table Design](https://www.sensedeep.com/blog/posts/2021/dynamodb-singletable-design.html) for background on single table design patterns. The model name is determined based on the keys used or returned in the request. See below for XXXX.
+The Model is the single-table entity name. Read [DynamoDB Single Table Design](https://www.sensedeep.com/blog/posts/2021/dynamodb-singletable-design.html) for background on single table design patterns. The model name is determined based on the keys used or returned in the request. See below for Single Table Configuration.
 
 The operation dimension is set to the DynamoDB operation: getItem, putItem etc.
 
@@ -153,9 +153,6 @@ Here is a screen shot:
 
 ![SenseDeep Single Table Monitoring](https://www.sensedeep.com/images/sensedeep/table-single.png)
 
-| Pino | 3,269 ms | 1281 lines |
-
-
 
 ### Metrics Class API
 
@@ -169,18 +166,9 @@ new Metrics(options)
 
 The Metrics constructor takes an options map parameter with the following properties.
 
-        params = Object.assign(DefaultConfig, params)
-        this.indexes = params.indexes || {}
-        this.source = params.source
-        this.max = params.max
-        this.period = (params.period || 30) * 1000
-        this.namespace = params.namespace
-        this.separator = params.separator
-
-
 | Property | Type | Description |
 | -------- | :--: | ----------- |
-| chan | `string\|function` | If using SenseLogs, this will define the SenseLogs channel to use for the output.|
+| chan | `string` | If using SenseLogs, this will define the SenseLogs channel to use for the output.|
 | indexes | `map` | Map of indexes supported by the table. The map keys are the names of the indexes. The values are a map of 'hash' and 'sort' attribute names. Must always contain a `primary` element.|
 | max | `number` | Maximum number of metric events to buffer before flushing to stdout and on to CloudWatch EMF. Defaults to 100.|
 | period | `number` | Number of seconds to buffer metric events before flushing to stdout. Defaults to 30 seconds.|
@@ -196,7 +184,11 @@ For example:
 const metrics = new Metrics({
     client,
     chan: 'metrics',
-    indexes: Indexes,
+    indexes: {
+        primary: { hash: 'pk', sort: 'sk' },
+        gs1: { hash: 'gs1pk', sort: 'gs1sk' },
+        gs2: { hash: 'gs2pk', sort: 'gs2sk' }
+    },
     max: 99,
     namespace: 'Acme/Launches',
     period: 15 * 1000,

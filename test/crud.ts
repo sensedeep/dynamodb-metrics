@@ -10,8 +10,8 @@ import {
 
 const Indexes = {
     primary: { hash: 'pk', sort: 'sk' },
-    // gs1: { hash: 'gs1pk', sort: 'gs1sk' project: 'all' },
-    // gs2: { hash: 'gs2pk', sort: 'gs2sk', project: 'all' }
+    // gs1: { hash: 'gs1pk', sort: 'gs1sk' },
+    // gs2: { hash: 'gs2pk', sort: 'gs2sk' }
 }
 
 //  Utility to create/delete test tables
