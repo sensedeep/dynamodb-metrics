@@ -1,6 +1,6 @@
 {
     "name": "dynamodb-metrics",
-    "version": "0.5.0",
+    "version": "0.5.1",
     "description": "Instrument DynamoDB with Metrics for Single Table Designs",
     "main": "dist/cjs/index.js",
     "module": "dist/mjs/index.js",

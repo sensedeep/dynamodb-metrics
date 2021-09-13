@@ -13,7 +13,6 @@ import {
     UpdateCommand
 } from '@aws-sdk/lib-dynamodb'
 
-
 const Namespace = 'Metrics/test'
 
 const PORT = parseInt(process.env.DYNAMODB_PORT)
