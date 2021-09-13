@@ -136,7 +136,7 @@ export default class DynamoMetrics {
         }
         let indexName = params.IndexName || 'primary'
 
-        this.addMetric(this.tree, values, this.name, this.source, indexName, model, operation)
+        this.addMetric(this.tree, values, params.TableName, this.source, indexName, model, operation)
 
         if (++this.count >= this.max || (this.lastFlushed + this.period) < timestamp) {
             this.flush(timestamp, this.tree)
@@ -234,12 +234,12 @@ export default class DynamoMetrics {
             }, values)
             if (process.stdout) {
                 if (this.test) {
-                    this.output.push(`SingleTable Custom Metrics ${dimensions} ${requests}` + JSON.stringify(data))
+                    this.output.push('SingleTable Custom Metrics ' + JSON.stringify(data) + '\n')
                 } else {
-                    process.stdout.write(`SingleTable Custom Metrics ${dimensions} ${requests}` + JSON.stringify(data))
+                    process.stdout.write('SingleTable Custom Metrics ' + JSON.stringify(data) + '\n')
                 }
             } else {
-                console.log(`SingleTable Custom Metrics ${dimensions} ${requests}` + JSON.stringify(data))
+                console.log('SingleTable Custom Metrics ' + JSON.stringify(data))
             }
         }
     }
