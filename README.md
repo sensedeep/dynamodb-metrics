@@ -1,6 +1,6 @@
 ![DynamoDB Metrics](https://www.sensedeep.com/images/metrics-logo.png)
 
-*DynamoDB Single Table Metrics*
+## Understand how your DynamoDB Single Table designs are performing!
 
 [![Build Status](https://img.shields.io/github/workflow/status/sensedeep/dynamodb-metrics/build)](https://img.shields.io/github/workflow/status/sensedeep/dynamodb-metrics/build)
 [![npm](https://img.shields.io/npm/v/dynamodb-metrics.svg)](https://www.npmjs.com/package/dynamodb-metrics)
@@ -8,7 +8,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/sensedeep/dynamodb-metrics/badge.svg?branch=main)](https://coveralls.io/github/sensedeep/dynamodb-metrics?branch=main)
 
 
-DynamoDB Metrics is a library to capture and emit single table CloudWatch metrics.
+DynamoDB Metrics calculates detailed DynamoDB metrics for single table design patterns.
 
 The standard DynamoDB metrics provide basic table and index level metrics. However, when using single-table design patterns, a more detailed set of performance metrics are required.
 
@@ -24,13 +24,14 @@ DynamoDB metrics was created for those who have existing code bases using Dynamo
 
 ## DynamoDB Metrics Features
 
-* Easy 2-line integration.
-* Emits CloudWatch metrics using [CloudWatch EMF](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch_Embedded_Metric_Format_Specification.html) for zero-latency metric creation.
+* Creates detailed CloudWatch metrics for Tables, Indexes, Apps/Functions, Entities and DynamoDB operations
+* Emits metrics using [CloudWatch EMF](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch_Embedded_Metric_Format_Specification.html) for zero-latency metric creation.
 * Supports AWS V2 and V3 SDKs.
+* Easy few line integration.
 * Very low CPU and memory impact.
-* Optionally integrates with [SenseLogs](https://www.npmjs.com/settings/sensedeep/packages) for dynamic control of metrics.
 * Supported by the free [SenseDeep Developer Plan](https://www.sensedeep.com/) for graphical DynamoDB single-table monitoring.
 * No dependencies.
+* Optionally integrates with [SenseLogs](https://www.npmjs.com/settings/sensedeep/packages) for dynamic control of metrics.
 * Clean, readable small code base (<300 lines).
 * Full TypeScript support.
 
@@ -57,6 +58,8 @@ const metrics = new Metrics({
 ```
 
 The `client` should be a DynamoDB client instance. The `indexes` parameter describes the names of your primary and secondary keys. Metrics uses this key description to decode your single-table items.
+
+Read [Single Table Configuration](#single-table-configuration) below for options on how to tell Metrics about your key design.
 
 Metrics will flush metrics by default every 30 seconds or after 100 requests, but you can tailor these defaults via constructor parameters. You can also force out the metrics via `metrics.flush` at any time.
 
@@ -147,7 +150,6 @@ const metrics = new Metrics({
     }
 })
 ```
-understand how you are constructing
 
 ### SenseDeep
 
