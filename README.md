@@ -1,6 +1,6 @@
 ![DynamoDB Metrics](https://www.sensedeep.com/images/metrics-logo.png)
 
-## Understand how your DynamoDB Single Table designs are performing!
+## Understand your DynamoDB Single Table designs!
 
 [![Build Status](https://img.shields.io/github/workflow/status/sensedeep/dynamodb-metrics/build)](https://img.shields.io/github/workflow/status/sensedeep/dynamodb-metrics/build)
 [![npm](https://img.shields.io/npm/v/dynamodb-metrics.svg)](https://www.npmjs.com/package/dynamodb-metrics)
@@ -19,8 +19,7 @@ If you've wondered:
 * Which queries are the most inefficient (items vs scanned).
 * Who is doing scans (app, function, model).
 
-DynamoDB metrics was created for those who have existing code bases using DynamoDB and single-table design patterns and for whom using
-[OneTable](https://github.com/sensedeep/dynamodb-onetable) would require a significant rewrite. It emits metrics that are compatible with those emited by OneTable.
+DynamoDB metrics was created for those with single-table DynamoDB designs who need to understand how their application data entities are performing.
 
 ## DynamoDB Metrics Features
 
