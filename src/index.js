@@ -1,22 +1,10 @@
 /*
     DynamoDB Metrics - Detailed DynamoDB Single Table metrics
-
-    Usage:
-
-    import Metrics from 'dynamodb-metrics'
-
-    //  V2 Document client
-    const client = new DynamoDB.DocumentClient({})
-
-    //  V2 Raw?
-
-    let metrics = new Metrics({client})
-
-    //  V3?
 */
 
 const DefaultConfig = {
     chan: 'metrics',
+    dimensions: {Table: true, Source: true, Index: true, Model: true, Operations: true},
     source: process.env.AWS_LAMBDA_FUNCTION_NAME || 'Default',      //  Default source name
     max: 100,                                                       //  Buffer metrics for 100 requests
     period: 30,                                                     //  or buffer for 30 seconds
@@ -25,28 +13,32 @@ const DefaultConfig = {
     separator: '#',
 }
 
-const MetricCollections = ['Table', 'Source', 'Index', 'Model', 'Operation']
+const MetricDimensions = ['Table', 'Source', 'Index', 'Model', 'Operation']
 
 const ReadWrite = {
+    batchGet: 'read',
+    batchWrite: 'write',
     deleteItem: 'write',
     getItem: 'read',
     putItem: 'write',
     query: 'read',
     scan: 'read',
-    updateItem: 'write',
-    batchGet: 'read',
-    batchWrite: 'write',
     transactGet: 'read',
     transactWrite: 'write',
+    updateItem: 'write',
 }
 
 const V3Ops = {
+    BatchGetItemCommand: 'batchGet',
+    BatchWriteItemCommand: 'batchWrite',
     CreateTableCommand: 'createTable',
     DeleteTableCommand: 'deleteTable',
     DeleteItemCommand: 'deleteItem',
     GetItemCommand: 'getItem',
     PutItemCommand: 'putItem',
     QueryCommand: 'query',
+    transactGetCommand: 'transactGet',
+    transactWrite: 'transactWrite',
     ScanCommand: 'scan',
     UpdateItemCommand: 'updateItem',
 }
@@ -59,6 +51,7 @@ export default class DynamoMetrics {
         this.source = params.source
         this.max = params.max
         this.period = (params.period || 30) * 1000
+        this.dimensions = params.dimensions
         this.namespace = params.namespace
         this.separator = params.separator
         this.log = params.senselogs
@@ -79,6 +72,7 @@ export default class DynamoMetrics {
                 let params = args.input
 
                 let operation = V3Ops[args.constructor.name]
+                /* istanbul ignore next */
                 if (!operation) {
                     console.error(`Cannot determin operation for ${args.constructor.name}`, args)
                 } else {
@@ -86,6 +80,7 @@ export default class DynamoMetrics {
                 }
                 let result = await next(args)
 
+                /* istanbul ignore next */
                 if (operation) {
                     this.response(operation, params, result.output, started)
                 }
@@ -93,8 +88,10 @@ export default class DynamoMetrics {
             }, { step: 'initialize', name: 'dynamodb-metrics' })
 
         } else {
+            //  V2
             client.service.customizeRequests(req => {
                 let started = new Date()
+                /* istanbul ignore next */
                 if (req.on) {
                     req.on('complete', res => { this.response(req.operation, req.params, res.data, started) })
                 }
@@ -119,14 +116,15 @@ export default class DynamoMetrics {
     response(operation, params, result, started) {
         let model = this.getModel(params, result)
         let capacity = 0
+        let tableName = params.TableName
         let consumed = result.ConsumedCapacity
         if (consumed) {
             //  Batch and transaction return array
             if (Array.isArray(consumed)) {
                 for (let item of consumed) {
-                    if (item.TableName == this.name) {
-                        capacity += item.CapacityUnits
-                    }
+                    //  Only supporting single tables at the moment
+                    tableName = item.TableName
+                    capacity += item.CapacityUnits
                 }
             } else {
                 capacity = consumed.CapacityUnits
@@ -140,9 +138,25 @@ export default class DynamoMetrics {
             latency: timestamp - started,
             capacity,
         }
-        let indexName = params.IndexName || 'primary'
 
-        this.addMetric(this.tree, values, params.TableName, this.source, indexName, model, operation)
+        let dimensions = this.dimensions
+        let dims = {}
+        if (dimensions.Table) {
+            dims.Table = tableName
+        }
+        if (dimensions.Source) {
+            dims.Source = this.source
+        }
+        if (dimensions.Index) {
+            dims.Index = params.IndexName || 'primary'
+        }
+        if (dimensions.Model) {
+            dims.model = model
+        }
+        if (dimensions.Operations) {
+            dims.Operations = operation
+        }
+        this.addMetricGroup(this.tree, values, dims)
 
         if (++this.count >= this.max || (this.lastFlushed + this.period) < timestamp) {
             this.flush(timestamp, this.tree)
@@ -151,43 +165,27 @@ export default class DynamoMetrics {
         }
     }
 
-    getModel(params) {
-        const hash = this.indexes.primary.hash
-        let model
-        if (typeof this.model == 'function') {
-            model = this.model(params)
-        } else if (this.separator) {
-            if (params.Item) {
-                model = Object.values(params.Item[hash])[0].split(this.separator)[0]
-            } else {
-                // model = Object.values(params.Keys[hash])[0].split(this.separator)[0]
-                model = '_Generic'
-            }
+    addMetricGroup(tree, values, dimensions) {
+        for (let i = 0; i < MetricDimensions.length; i++) {
+            let name = MetricDimensions[i]
+            tree = tree[name] = tree[name] || {}
+            let dimension = dimensions[MetricDimensions[i]]
+            this.addMetric(tree, values, name, dimension)
+            tree = tree[dimension]
         }
-        return model
     }
 
-    addMetric(metrics, values, ...keys) {
+    addMetric(tree, values, name, dimension) {
         let {operation, capacity, count, latency, scanned} = values
-        let collections = MetricCollections.slice(0)
-        let name = collections.shift()
-        for (let key of keys) {
-            //  name is: Table, Source, Index ...
-            metrics = metrics[name] = metrics[name] || {}
-
-            //  key is the actual instance values
-            let item = metrics[key] = metrics[key] || {
-                counters: {count: 0, latency: 0, read: 0, requests: 0, scanned: 0, write: 0}
-            }
-            let counters = item.counters
-            counters[ReadWrite[operation]] += capacity      //  RCU, WCU
-            counters.latency += latency                     //  Latency in ms
-            counters.count += count                         //  Item count
-            counters.scanned += scanned                     //  Items scanned
-            counters.requests++                             //  Number of requests
-            metrics = metrics[key]
-            name = collections.shift()
+        let item = tree[dimension] = tree[dimension] || {
+            counters: {count: 0, latency: 0, read: 0, requests: 0, scanned: 0, write: 0}
         }
+        let counters = item.counters
+        counters[ReadWrite[operation]] += capacity      //  RCU, WCU
+        counters.latency += latency                     //  Latency in ms
+        counters.count += count                         //  Item count
+        counters.scanned += scanned                     //  Items scanned
+        counters.requests++                             //  Number of requests
     }
 
     flush(timestamp = Date.now(), tree = this.tree, dimensions = [], props = {}) {
@@ -200,13 +198,19 @@ export default class DynamoMetrics {
                     rec.requests = rec.count = rec.scanned = rec.latency = rec.read = rec.write = 0
                 }
             } else {
-                dimensions.push(key)
+                let dims = dimensions.slice(0)
+                dims.push(key)
                 for (let [name, tree] of Object.entries(rec)) {
                     let rprops = Object.assign({}, props)
                     rprops[key] = name
-                    this.flush(timestamp, tree, dimensions.slice(0), rprops)
+                    this.flush(timestamp, tree, dims, rprops)
                 }
             }
+        }
+        if (this.test && tree == this.tree) {
+            let output = this.output
+            this.output = []
+            return output
         }
     }
 
@@ -220,7 +224,7 @@ export default class DynamoMetrics {
         if (this.log && this.log.emit) {
             //  Senselogs. Preferred as it can be dynamically controled.
             let chan = this.chan || 'metrics'
-            this.log.metrics(chan, `SingleTable Custom Metrics ${dimensions} ${requests}`,
+            this.log.metrics(chan, 'SingleTable Custom Metrics',
                 this.namespace, values, [dimensions], {latency: 'Milliseconds', default: 'Count'})
 
         } else {
@@ -238,15 +242,31 @@ export default class DynamoMetrics {
                     }]
                 },
             }, values)
-            if (process.stdout) {
-                if (this.test) {
-                    this.output.push('SingleTable Custom Metrics ' + JSON.stringify(data) + '\n')
-                } else {
-                    process.stdout.write('SingleTable Custom Metrics ' + JSON.stringify(data) + '\n')
-                }
+            if (this.test) {
+                //  Capture just for testsing
+                this.output.push('SingleTable Custom Metrics ' + JSON.stringify(data) + '\n')
+
+            } else if (process.stdout) {
+                process.stdout.write('SingleTable Custom Metrics ' + JSON.stringify(data) + '\n')
+
             } else {
                 console.log('SingleTable Custom Metrics ' + JSON.stringify(data))
             }
         }
+    }
+
+    getModel(params) {
+        const hash = this.indexes.primary.hash
+        let model
+        if (typeof this.model == 'function') {
+            model = this.model(params)
+        } else if (this.separator) {
+            if (params.Item) {
+                model = Object.values(params.Item[hash])[0].split(this.separator)[0]
+            } else {
+                model = '_Generic'
+            }
+        }
+        return model
     }
 }
