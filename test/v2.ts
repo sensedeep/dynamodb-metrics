@@ -5,7 +5,7 @@ import AWS from 'aws-sdk'
 import DynamoDB from 'aws-sdk/clients/dynamodb'
 import {Metrics, Table, print, dump, delay} from './utils/init'
 
-jest.setTimeout(7200 * 1000)
+// jest.setTimeout(7200 * 1000)
 
 const PORT = parseInt(process.env.DYNAMODB_PORT)
 

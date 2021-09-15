@@ -6,7 +6,7 @@ import {
     GetCommand, DeleteCommand, PutCommand, QueryCommand, ScanCommand, UpdateCommand
 } from './utils/init'
 
-jest.setTimeout(7200 * 1000)
+// jest.setTimeout(7200 * 1000)
 
 const Indexes = {
     primary: { hash: 'pk', sort: 'sk' },
