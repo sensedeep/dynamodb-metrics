@@ -103,6 +103,12 @@ export default class DynamoMetrics {
         }
     }
 
+    destroy() {
+        if (this.client.middlewareStack) {
+            this.client.middlewareStack.remove('dynamodb-metrics')
+        }
+    }
+
     request(operation, params) {
         if (ReadWrite[operation]) {
             params.ReturnConsumedCapacity = 'TOTAL'         // INDEXES | TOTAL | NONE

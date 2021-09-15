@@ -5,6 +5,7 @@ import Table from './table'
 import { DynamoDBClient, CreateTableCommand, DeleteTableCommand, ListTablesCommand } from '@aws-sdk/client-dynamodb'
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb'
 import {
+    BatchWriteCommand,
     GetCommand,
     DeleteCommand,
     PutCommand,
@@ -51,4 +52,5 @@ const delay = async (time) => {
 }
 
 export {Metrics, Table, Namespace, client, delay, dump, print}
-export {CreateTableCommand, DeleteCommand, DeleteTableCommand, GetCommand, ListTablesCommand, PutCommand, QueryCommand, ScanCommand, UpdateCommand}
+export {CreateTableCommand, DeleteCommand, DeleteTableCommand, BatchWriteCommand, 
+        GetCommand, ListTablesCommand, PutCommand, QueryCommand, ScanCommand, UpdateCommand}

@@ -1,5 +1,5 @@
 /*
-    debug.ts - Debug test
+    coverage.ts - tests for improved coverage
  */
 import {
     Metrics, Table, Namespace, client, print, dump, delay,
@@ -10,12 +10,10 @@ jest.setTimeout(7200 * 1000)
 
 const Indexes = {
     primary: { hash: 'pk', sort: 'sk' },
-    // gs1: { hash: 'gs1pk', sort: 'gs1sk' project: 'all' },
-    // gs2: { hash: 'gs2pk', sort: 'gs2sk', project: 'all' }
 }
 
 //  Utility to create/delete test tables
-const TableName = 'DebugTable'
+const TableName = 'CoverageTable'
 const table = new Table({
     name: TableName,
     indexes: Indexes,
@@ -30,16 +28,15 @@ test('Create', async() => {
 })
 
 test('Debug', async() => {
-    const metrics = new Metrics({
+    let metrics = new Metrics({client})
+    metrics.destroy()
+
+    metrics = new Metrics({
         client,
         chan: 'metrics',
         indexes: Indexes,
-        max: 99,
         namespace: Namespace,
-        period: 15 * 1000,
-        source: 'jest',
         test: true,
-        separator: '#',
         model: (params) => {
             return 'User'
         }

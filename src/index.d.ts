@@ -24,5 +24,6 @@ export default class DynamoMetrics {
     lastFlushed: number
     output: []
     constructor(options?: ConstructorOptions);
+    destroy()
     flush()
 }

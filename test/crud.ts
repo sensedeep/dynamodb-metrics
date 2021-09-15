@@ -3,10 +3,10 @@
  */
 import {
     Metrics, Table, Namespace, client, print, dump, delay,
-    GetCommand, DeleteCommand, PutCommand, QueryCommand, ScanCommand, UpdateCommand
+    BatchWriteCommand, GetCommand, DeleteCommand, PutCommand, QueryCommand, ScanCommand, UpdateCommand
 } from './utils/init'
 
-// jest.setTimeout(7200 * 1000)
+jest.setTimeout(7200 * 1000)
 
 const Indexes = {
     primary: { hash: 'pk', sort: 'sk' },
@@ -29,7 +29,7 @@ test('Create', async() => {
     }
 })
 
-test('Quick spin', async() => {
+test('Basic CRUD', async() => {
     const metrics = new Metrics({
         client,
         chan: 'metrics',
@@ -45,6 +45,7 @@ test('Quick spin', async() => {
         }
     })
 
+    //  Put
     await client.send(new PutCommand({
         TableName,
         Item: {
@@ -53,12 +54,56 @@ test('Quick spin', async() => {
             name: 'John Doe',
         },
     }))
+    let output = await metrics.flush()
+    expect(output.length).toBe(5)
 
-    let items = await client.send(new ScanCommand({ TableName }))
+    //  Get
+    let item: any = await client.send(new GetCommand({
+        TableName,
+        Key: {
+            pk: 'User#42',
+            sk: 'User',
+        },
+    }))
+    expect(item.Item.name).toBe('John Doe')
+    output = await metrics.flush()
+    expect(output.length).toBe(5)
 
-    await metrics.flush()
+    //  Query
+    let items: any = await client.send(new QueryCommand({
+        TableName,
+        KeyConditionExpression: `pk = :pk`,
+        ExpressionAttributeValues: {
+            ':pk': 'User#42'
+        }
+    }))
+    expect(items.Items.length).toBe(1)
+    output = await metrics.flush()
+    expect(output.length).toBe(5)
 
-    expect(metrics.output.length > 1).toBe(true)
+    //  Scan
+    items = await client.send(new ScanCommand({ TableName }))
+    expect(items.Items.length).toBe(1)
+    output = await metrics.flush()
+    expect(output.length).toBe(5)
+
+    //  Batch
+    let result = await client.send(new BatchWriteCommand({
+        RequestItems: {
+            [TableName]: [{
+                PutRequest: {
+                    Item: {
+                        pk: 'User#43',
+                        sk: 'User',
+                        name: 'Road Runner',
+                    }
+                }
+            }]
+        }
+    }))
+    // expect(items.Items.length).toBe(1)
+    output = await metrics.flush()
+    expect(output.length).toBe(5)
 })
 
 test('Destroy Table', async() => {

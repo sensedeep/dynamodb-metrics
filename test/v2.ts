@@ -40,7 +40,7 @@ test('Create', async() => {
     }
 })
 
-test('Constructor: destination, name', async() => {
+test('V2 CRUD', async() => {
     const metrics = new Metrics({
         client,
         chan: 'metrics',
@@ -64,14 +64,35 @@ test('Constructor: destination, name', async() => {
             name: 'John Doe',
         }
     }).promise()
+    let output = await metrics.flush()
+    expect(output.length).toBe(5)
 
-    let items = await client.scan({
+    let item = await client.get({
         TableName,
+        Key: {
+            pk: 'User#42',
+            sk: 'User',
+        }
     }).promise()
+    expect(item.Item.name).toBe('John Doe')
+    output = await metrics.flush()
+    expect(output.length).toBe(5)
 
-    await metrics.flush()
+    let items = await client.query({
+        TableName,
+        KeyConditionExpression: `pk = :pk`,
+        ExpressionAttributeValues: {
+            ':pk': 'User#42'
+        }
+    }).promise()
+    expect(items.Items.length).toBe(1)
+    output = await metrics.flush()
+    expect(output.length).toBe(5)
 
-    expect(metrics.output.length > 1).toBe(true)
+    items = await client.scan({ TableName }).promise()
+    expect(items.Items.length).toBe(1)
+    output = await metrics.flush()
+    expect(output.length).toBe(5)
 })
 
 test('Destroy Table', async() => {
