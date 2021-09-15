@@ -42,11 +42,10 @@
     },
     "dependencies": {
         "@aws-sdk/client-dynamodb": "^3.30.0",
-        "@aws-sdk/lib-dynamodb": "^3.30.0",
-        "@aws-sdk/util-dynamodb": "^3.5.0",
-        "aws-sdk": "^2.718.0"
+        "@aws-sdk/lib-dynamodb": "^3.30.0"
     },
     "devDependencies": {
+        "aws-sdk": "^2.718.0",
         "@types/jest": "^26.0.19",
         "@types/node": "^14.14.16",
         "dynamo-db-local": "^4.0.2",
