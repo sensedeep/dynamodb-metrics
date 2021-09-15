@@ -174,6 +174,7 @@ The Metrics constructor takes an options map parameter with the following proper
 | Property | Type | Description |
 | -------- | :--: | ----------- |
 | chan | `string` | If using SenseLogs, this will define the SenseLogs channel to use for the output.|
+| dimensions | `map` | Map of dimensions to emit. Defaults to {Table: true, Source: true, Index: true, Model: true, Operations: true} |
 | indexes | `map` | Map of indexes supported by the table. The map keys are the names of the indexes. The values are a map of 'hash' and 'sort' attribute names. Must always contain a `primary` element.|
 | max | `number` | Maximum number of metric events to buffer before flushing to stdout and on to CloudWatch EMF. Defaults to 100.|
 | period | `number` | Number of seconds to buffer metric events before flushing to stdout. Defaults to 30 seconds.|
@@ -183,11 +184,12 @@ The Metrics constructor takes an options map parameter with the following proper
 | model | `function` | Set to a function to be invoked to determine the entity model name. Invoked as: `model(params, result)`|
 | source | `string` | Set to an identifying string for the application or function calling DynamoDB. Defaults to the Lambda function name.|
 
-For example:
+For example, every parameter in use:
 
 ```javascript
 const metrics = new Metrics({
     client,
+    dimensions: {Table: true, Source: true, Index: true, Model: true, Operations: true},
     chan: 'metrics',
     indexes: {
         primary: { hash: 'pk', sort: 'sk' },
@@ -204,6 +206,16 @@ const metrics = new Metrics({
     }
 })
 ```
+
+## Under the Hood
+
+The metric are emitted using the [CloudWatch EMF](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch_Embedded_Metric_Format_Specification.html) via the `metrics` method. This permits zero-latency creation of metrics without impacting the performance of you Lambdas.
+
+Metrics will only be emitted for dimension combinations that are active. If you have many application entities and indexes, you may end up with a large number of metrics. If your site uses all these dimensions actively, your CloudWatch Metric costs may be high. You will be charged by AWS CloudWatch for the total number of metrics that are active each hour at the rate of $0.30 cents per hour.
+
+If that is the case, you can minimize your cloud watch charges, by reducing the number of dimensions via the `dimensions` property. You could consider disabling the `source` or `operation` dimensions. Alternatively, you should consider [SenseLogs](https://www.npmjs.com/package/senselogs) which integrates with Metrics and can dynamically control your metrics to enable and disable metrics dynamically.
+
+DynamoDB Metrics are buffered and aggregated to minimize the load on your system. If a Lambda function is reclaimed by AWS Lambda, there may be a few metric requests that are not emitted before the function is reclaimed. This should be a very small percentage and should not significantly impact the quality of the metrics. You can control this buffering via the `max` and `period` parameters.
 
 ### Methods
 
