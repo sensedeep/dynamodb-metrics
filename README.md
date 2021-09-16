@@ -182,19 +182,18 @@ The Metrics constructor takes an options map parameter with the following proper
 | env | `boolean` | Set to true to enable dynamic control via the LOG_FILTER environment variable. Defaults to false.|
 | indexes | `map` | Map of indexes supported by the table. The map keys are the names of the indexes. The values are a map of 'hash' and 'sort' attribute names. Must always contain a `primary` element.|
 | max | `number` | Maximum number of metric events to buffer before flushing to stdout and on to CloudWatch EMF. Defaults to 100.|
-| model | `function` | Set to a function to be invoked to determine the entity model name. Invoked as: `model(params, result)`|
+| model | `function` | Set to a function to be invoked to determine the entity model name. Invoked as: `model(params, result)`. Defaults to null.|
 | namespace | `string` | Namespace to use for the emitted metrics. Defaults to `SingleTable/Metrics.1`.|
 | period | `number` | Number of seconds to buffer metric events before flushing to stdout. Defaults to 30 seconds.|
+| queries | `boolean` | Set to true to enable per-query profile metrics. Defaults to true.|
 | separator | `string` | Separator used between entity/model names in the hash and sort keys. Defaults to '#'.|
 | senselogs | `instance` | SenseLogs instance to use to emit the metrics. This permits dynamic control of metrics.|
 | source | `string` | Set to an identifying string for the application or function calling DynamoDB. Defaults to the Lambda function name.|
 | tenant | `string` | Set to an identifying string for the customer or tenant. Defaults to null.|
 
 <!--
-| queries | `boolean` | Set to true to enable per-query profile metrics. Defaults to true.|
 | hot | `boolean` | Set to true to enable hot-partition tracking. WARNING: this can lead to high CloudWatch costs. Defaults to false.|
     hot: true,
-    queries: true,
 -->
 
 For example, every parameter in use:
@@ -214,6 +213,7 @@ const metrics = new Metrics({
     max: 99,
     namespace: 'Acme/Launches',
     period: 15 * 1000,
+    queries: true,
     source: 'BigRocket',
     tenant: 'Customer-42',
     separator: '#',
@@ -224,6 +224,29 @@ const metrics = new Metrics({
 ```
 
 Metrics can be dynamically controlled by the LOG_FILTER environment variable. If this environment variable contains the string `dbmetrics` and the `env` params is set to true, then Metrics will be enabled. If the `env` parameter is unset, LOG_FILTER will be ignored.
+
+## Profiling Queries
+
+You can also profile queries and scans by setting the `queries` parameter to true and passing a `profile` property to the relevant DynamoDB query or scan command. You can set this to any identifying string to describe the query or scan. These metrics are created under the Profile dimension. Note: the Profile dimension is separate and is not listed in the `dimensions` property.
+
+For example:
+
+```javascript
+let items = await client.query({
+    TableName,
+    KeyConditionExpression: `pk = :pk`,
+    ExpressionAttributeValues: {':pk': 'User#42'},
+    profile: 'test-query',
+}).promise()
+
+// or V3
+let items = await client.send(new QueryCommand({
+    TableName,
+    KeyConditionExpression: `pk = :pk`,
+    ExpressionAttributeValues: {':pk': 'User#42'},
+    profile: 'test-query',
+}))
+```
 
 ## Under the Hood
 

@@ -9,7 +9,6 @@
     },
     "license": "ISC",
     "dependencies": {
-        "aws-sdk": "^2.879.0",
         "dynamodb-metrics": "^0.5.0"
     },
     "devDependencies": {

@@ -2,7 +2,6 @@
     Metrics Overview -- in JavaScript
  */
 
-import AWS from 'aws-sdk'
 import DynamoDB from 'aws-sdk/clients/dynamodb.js'
 import Metrics from 'dynamodb-metrics'
 
@@ -16,7 +15,6 @@ async function test() {
         indexes: {primary: { hash: 'pk', sort: 'sk' }},
         tenant: 'Customer-42',
         source: 'OverviewSample',
-        separator: ':',
         namespace: 'SingleTable/Test.1',
     })
 

@@ -60,6 +60,7 @@ export default class Metrics {
         this.queries = params.queries
         this.hot = params.hot
         this.log = params.senselogs
+        this.enable = params.enable != null ? params.enable : true
 
         this.count = 0
         this.lastFlushed = Date.now()
@@ -74,8 +75,10 @@ export default class Metrics {
             let filter = process.env[key]
             if (filter.indexOf('dbmetrics') < 0) {
                 this.enable = false
-                return
             }
+        }
+        if (!this.enable) {
+            return
         }
         this.dimensions = params.dimensions
         //  LEGACY (was object)
@@ -97,7 +100,7 @@ export default class Metrics {
                 let operation = V3Ops[args.constructor.name]
                 /* istanbul ignore next */
                 if (!operation) {
-                    console.error(`Cannot determin operation for ${args.constructor.name}`, args)
+                    console.error(`Cannot determine operation for ${args.constructor.name}`, args)
                 } else {
                     this.request(operation, params)
                 }
@@ -105,10 +108,14 @@ export default class Metrics {
 
                 /* istanbul ignore next */
                 if (operation) {
-                    this.response(operation, params, result.output, started)
+                    if (result.output) {
+                        this.response(operation, params, result.output, started)
+                    } else {
+                        //  FUTURE - count errors
+                    }
                 }
                 return result
-            }, { step: 'initialize', name: 'dynamodb-metrics' })
+            }, {step: 'initialize', name: 'dynamodb-metrics'})
 
         } else {
             //  V2
@@ -116,7 +123,15 @@ export default class Metrics {
                 let started = new Date()
                 /* istanbul ignore next */
                 if (req.on) {
-                    req.on('complete', res => { this.response(req.operation, req.params, res.data, started) })
+                    let profile = req.params.profile
+                    req.on('complete', res => {
+                        if (res.error) {
+                            //  Could log these errors
+                        } else if (res.data) {
+                            req.params.profile = profile
+                            this.response(req.operation, req.params, res.data, started)
+                        }
+                    })
                 }
                 this.request(req.operation, req.params)
             })
@@ -168,10 +183,10 @@ export default class Metrics {
         if (map.Table) {
             dimensions.Table = tableName
         }
-        if (map.Tenant) {
+        if (map.Tenant && this.tenant) {
             dimensions.Tenant = this.tenant
         }
-        if (map.Source) {
+        if (map.Source && this.source) {
             dimensions.Source = this.source
         }
         if (map.Index) {
@@ -222,6 +237,7 @@ export default class Metrics {
     }
 
     flush(timestamp = Date.now(), tree = this.tree, dimensions = [], props = {}) {
+        if (!this.enable) return
         for (let [key, rec] of Object.entries(tree)) {
             if (key == 'counters') {
                 if (rec.requests) {

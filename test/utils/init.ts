@@ -52,5 +52,5 @@ const delay = async (time) => {
 }
 
 export {Metrics, Table, Namespace, client, delay, dump, print}
-export {CreateTableCommand, DeleteCommand, DeleteTableCommand, BatchWriteCommand, 
+export {CreateTableCommand, DeleteCommand, DeleteTableCommand, BatchWriteCommand,
         GetCommand, ListTablesCommand, PutCommand, QueryCommand, ScanCommand, UpdateCommand}
