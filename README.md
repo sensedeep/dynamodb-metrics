@@ -104,12 +104,15 @@ DynamoDB Metrics creates the following metrics
 DynamoDB Metrics will create these metrics for the following dimensions:
 
 * Table
+* Tenant
 * Source
 * Index
 * Model
 * Operation
 
 The Table dimension is set to the table Name.
+
+The Tenant dimension is defined via the `Metric` constructor `tenant` parameter. You can set this to any identifying string you like. It is typically set to your customer or tenant ID or name. If unset, it will not be used.
 
 The Source dimension is defined via the `Metric` constructor `source` parameter. You can set this to any identifying string you like. It is typically set to your application or function name. If unset, it will default to the name of the executing Lambda function.
 
@@ -174,7 +177,7 @@ The Metrics constructor takes an options map parameter with the following proper
 | Property | Type | Description |
 | -------- | :--: | ----------- |
 | chan | `string` | If using SenseLogs, this will define the SenseLogs channel to use for the output.|
-| dimensions | `map` | Map of dimensions to emit. Defaults to {Table: true, Source: true, Index: true, Model: true, Operations: true} |
+| dimensions | `array` | Ordered array of dimensions to emit. Defaults to [Table, Tenant, Source, Index, Model, Operation].|
 | indexes | `map` | Map of indexes supported by the table. The map keys are the names of the indexes. The values are a map of 'hash' and 'sort' attribute names. Must always contain a `primary` element.|
 | max | `number` | Maximum number of metric events to buffer before flushing to stdout and on to CloudWatch EMF. Defaults to 100.|
 | period | `number` | Number of seconds to buffer metric events before flushing to stdout. Defaults to 30 seconds.|
@@ -183,6 +186,7 @@ The Metrics constructor takes an options map parameter with the following proper
 | senselogs | `instance` | SenseLogs instance to use to emit the metrics. This permits dynamic control of metrics.|
 | model | `function` | Set to a function to be invoked to determine the entity model name. Invoked as: `model(params, result)`|
 | source | `string` | Set to an identifying string for the application or function calling DynamoDB. Defaults to the Lambda function name.|
+| tenant | `string` | Set to an identifying string for the customer or tenant. Defaults to null.|
 
 For example, every parameter in use:
 
@@ -200,6 +204,7 @@ const metrics = new Metrics({
     namespace: 'Acme/Launches',
     period: 15 * 1000,
     source: 'BigRocket',
+    tenant: 'Customer-42',
     separator: '#',
     model: (params, result) => {
         return Object.values(params.Item[hash])[0].split('#')[0]
@@ -221,8 +226,7 @@ DynamoDB Metrics are buffered and aggregated to minimize the load on your system
 
 #### flush()
 
-Flush any buffered metrics to stdout.
-
+Flush any buffered metrics to stdout. By default, Metrics will flush buffered metrics every 30 seconds or after 100 requests. This parameters are controlled by the Metrics `period` and `max` constructor parameters.
 
 ### References
 
