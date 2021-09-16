@@ -4,16 +4,15 @@
 
 const DefaultConfig = {
     chan: 'metrics',
-    dimensions: {Table: true, Source: true, Index: true, Model: true, Operations: true},
-    source: process.env.AWS_LAMBDA_FUNCTION_NAME || 'Default',      //  Default source name
-    max: 100,                                                       //  Buffer metrics for 100 requests
-    period: 30,                                                     //  or buffer for 30 seconds
-    namespace: 'SingleTable/Metrics.1',                             //  Default custom metric namespace
+    dimensions: ['Table', 'Tenant', 'Source', 'Index', 'Model', 'Operation'],
     indexes: {primary: {hash: 'pk', sort: 'sk'}},
+    max: 100,                                                       //  Buffer metrics for 100 requests
+    namespace: 'SingleTable/Metrics.1',                             //  Default custom metric namespace
+    period: 30,                                                     //  or buffer for 30 seconds
     separator: '#',
+    source: process.env.AWS_LAMBDA_FUNCTION_NAME || 'Default',      //  Default source name
+    tenant: null,
 }
-
-const MetricDimensions = ['Table', 'Source', 'Index', 'Model', 'Operation']
 
 const ReadWrite = {
     batchGet: 'read',
@@ -49,13 +48,22 @@ export default class DynamoMetrics {
         params = Object.assign(DefaultConfig, params)
         this.indexes = params.indexes || {}
         this.source = params.source
+        this.tenant = params.tenant
         this.max = params.max
         this.period = (params.period || 30) * 1000
-        this.dimensions = params.dimensions
         this.namespace = params.namespace
         this.separator = params.separator
         this.log = params.senselogs
 
+        this.dimensions = params.dimensions
+        //  LEGACY (was object)
+        if (!Array.isArray(this.dimensions)) {
+            this.dimensions = Object.keys(this.dimensions)
+        }
+        this.dimensionMap = {}
+        for (let dim of this.dimensions) {
+            this.dimensionMap[dim] = true
+        }
         this.count = 0
         this.lastFlushed = Date.now()
         this.tree = {}
@@ -139,24 +147,28 @@ export default class DynamoMetrics {
             capacity,
         }
 
-        let dimensions = this.dimensions
-        let dims = {}
-        if (dimensions.Table) {
-            dims.Table = tableName
+        let dimensions = {}
+        let map = this.dimensionMap
+
+        if (map.Table) {
+            dimensions.Table = tableName
         }
-        if (dimensions.Source) {
-            dims.Source = this.source
+        if (map.Tenant) {
+            dimensions.Tenant = this.tenant
         }
-        if (dimensions.Index) {
-            dims.Index = params.IndexName || 'primary'
+        if (map.Source) {
+            dimensions.Source = this.source
         }
-        if (dimensions.Model) {
-            dims.model = model
+        if (map.Index) {
+            dimensions.Index = params.IndexName || 'primary'
         }
-        if (dimensions.Operations) {
-            dims.Operations = operation
+        if (map.Model) {
+            dimensions.Model = model
         }
-        this.addMetricGroup(this.tree, values, dims)
+        if (map.Operation) {
+            dimensions.Operation = operation
+        }
+        this.addMetricGroup(this.tree, values, dimensions)
 
         if (++this.count >= this.max || (this.lastFlushed + this.period) < timestamp) {
             this.flush(timestamp, this.tree)
@@ -166,12 +178,13 @@ export default class DynamoMetrics {
     }
 
     addMetricGroup(tree, values, dimensions) {
-        for (let i = 0; i < MetricDimensions.length; i++) {
-            let name = MetricDimensions[i]
-            tree = tree[name] = tree[name] || {}
-            let dimension = dimensions[MetricDimensions[i]]
-            this.addMetric(tree, values, name, dimension)
-            tree = tree[dimension]
+        for (let name of this.dimensions) {
+            let dimension = dimensions[name]
+            if (dimension) {
+                tree = tree[name] = tree[name] || {}
+                this.addMetric(tree, values, name, dimension)
+                tree = tree[dimension]
+            }
         }
     }
 
