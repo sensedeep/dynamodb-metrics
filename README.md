@@ -178,15 +178,24 @@ The Metrics constructor takes an options map parameter with the following proper
 | -------- | :--: | ----------- |
 | chan | `string` | If using SenseLogs, this will define the SenseLogs channel to use for the output.|
 | dimensions | `array` | Ordered array of dimensions to emit. Defaults to [Table, Tenant, Source, Index, Model, Operation].|
+| enable | `boolean` | Set to true to enable metrics. Defaults to true.|
+| env | `boolean` | Set to true to enable dynamic control via the LOG_FILTER environment variable. Defaults to false.|
 | indexes | `map` | Map of indexes supported by the table. The map keys are the names of the indexes. The values are a map of 'hash' and 'sort' attribute names. Must always contain a `primary` element.|
 | max | `number` | Maximum number of metric events to buffer before flushing to stdout and on to CloudWatch EMF. Defaults to 100.|
-| period | `number` | Number of seconds to buffer metric events before flushing to stdout. Defaults to 30 seconds.|
+| model | `function` | Set to a function to be invoked to determine the entity model name. Invoked as: `model(params, result)`|
 | namespace | `string` | Namespace to use for the emitted metrics. Defaults to `SingleTable/Metrics.1`.|
+| period | `number` | Number of seconds to buffer metric events before flushing to stdout. Defaults to 30 seconds.|
 | separator | `string` | Separator used between entity/model names in the hash and sort keys. Defaults to '#'.|
 | senselogs | `instance` | SenseLogs instance to use to emit the metrics. This permits dynamic control of metrics.|
-| model | `function` | Set to a function to be invoked to determine the entity model name. Invoked as: `model(params, result)`|
 | source | `string` | Set to an identifying string for the application or function calling DynamoDB. Defaults to the Lambda function name.|
 | tenant | `string` | Set to an identifying string for the customer or tenant. Defaults to null.|
+
+<!--
+| queries | `boolean` | Set to true to enable per-query profile metrics. Defaults to true.|
+| hot | `boolean` | Set to true to enable hot-partition tracking. WARNING: this can lead to high CloudWatch costs. Defaults to false.|
+    hot: true,
+    queries: true,
+-->
 
 For example, every parameter in use:
 
@@ -195,6 +204,8 @@ const metrics = new Metrics({
     client,
     dimensions: {Table: true, Source: true, Index: true, Model: true, Operations: true},
     chan: 'metrics',
+    enable: true,
+    env: true,
     indexes: {
         primary: { hash: 'pk', sort: 'sk' },
         gs1: { hash: 'gs1pk', sort: 'gs1sk' },
@@ -211,6 +222,8 @@ const metrics = new Metrics({
     }
 })
 ```
+
+Metrics can be dynamically controlled by the LOG_FILTER environment variable. If this environment variable contains the string `dbmetrics` and the `env` params is set to true, then Metrics will be enabled. If the `env` parameter is unset, LOG_FILTER will be ignored.
 
 ## Under the Hood
 

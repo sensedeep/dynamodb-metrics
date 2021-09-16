@@ -5,10 +5,14 @@
 const DefaultConfig = {
     chan: 'metrics',
     dimensions: ['Table', 'Tenant', 'Source', 'Index', 'Model', 'Operation'],
+    enable: true,
+    env: false,
+    hot: false,
     indexes: {primary: {hash: 'pk', sort: 'sk'}},
     max: 100,                                                       //  Buffer metrics for 100 requests
     namespace: 'SingleTable/Metrics.1',                             //  Default custom metric namespace
     period: 30,                                                     //  or buffer for 30 seconds
+    queries: true,
     separator: '#',
     source: process.env.AWS_LAMBDA_FUNCTION_NAME || 'Default',      //  Default source name
     tenant: null,
@@ -42,10 +46,10 @@ const V3Ops = {
     UpdateItemCommand: 'updateItem',
 }
 
-export default class DynamoMetrics {
+export default class Metrics {
 
     constructor(params = {}) {
-        params = Object.assign(DefaultConfig, params)
+        this.params = params = Object.assign(DefaultConfig, params)
         this.indexes = params.indexes || {}
         this.source = params.source
         this.tenant = params.tenant
@@ -53,8 +57,26 @@ export default class DynamoMetrics {
         this.period = (params.period || 30) * 1000
         this.namespace = params.namespace
         this.separator = params.separator
+        this.queries = params.queries
+        this.hot = params.hot
         this.log = params.senselogs
 
+        this.count = 0
+        this.lastFlushed = Date.now()
+        this.tree = {}
+
+        this.test = params.test
+        if (this.test) {
+            this.output = []
+        }
+        if (params.env && process.env) {
+            let key = params.env != true ? params.env : 'LOG_FILTER'
+            let filter = process.env[key]
+            if (filter.indexOf('dbmetrics') < 0) {
+                this.enable = false
+                return
+            }
+        }
         this.dimensions = params.dimensions
         //  LEGACY (was object)
         if (!Array.isArray(this.dimensions)) {
@@ -64,14 +86,7 @@ export default class DynamoMetrics {
         for (let dim of this.dimensions) {
             this.dimensionMap[dim] = true
         }
-        this.count = 0
-        this.lastFlushed = Date.now()
-        this.tree = {}
 
-        this.test = params.test
-        if (this.test) {
-            this.output = []
-        }
         let client = this.client = params.client
         if (client.middlewareStack) {
             //  V3
@@ -167,6 +182,11 @@ export default class DynamoMetrics {
         }
         if (map.Operation) {
             dimensions.Operation = operation
+        }
+        //  FUTURE
+        if (this.queries && params.profile) {
+            this.tree.Profile = this.tree.Profile || {}
+            this.addMetric(this.tree.Profile, values, 'Profile', params.profile)
         }
         this.addMetricGroup(this.tree, values, dimensions)
 
