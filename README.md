@@ -14,8 +14,10 @@ The standard DynamoDB metrics provide basic table and index level metrics. Howev
 
 If you've wondered:
 
-* Which app, function is causing the most load and consuming the most RCU/WCU.
+* Which customer tenant is causing the most load and consuming the most RCU/WCU.
+* Which app or function is causing the most load and consuming the most RCU/WCU.
 * Which single-table entity/model is most loaded and consuming RCU/WCU.
+* Which operations are being used the most.
 * Which queries are the most inefficient (items vs scanned).
 * Who is doing scans (app, function, model).
 
@@ -75,7 +77,7 @@ If using the AWS V2 SDK with the DocumentClient, create your DynamoDB client.
 import DynamoDB from 'aws-sdk/clients/dynamodb'
 client: new DynamoDB.DocumentClient({})
 
-or if using the AWS V2 SDK with the low level API
+// or if using the AWS V2 SDK with the low level API
 
 const client = new DynamoDB({})
 ```
@@ -101,7 +103,7 @@ DynamoDB Metrics creates the following metrics
 * scanned &mdash; Number of items scanned
 * requests &mdash; Number of API requests issued
 
-DynamoDB Metrics will create these metrics for the following dimensions:
+DynamoDB Metrics will create these metrics for the following dimensions by default:
 
 * Table
 * Tenant
@@ -121,6 +123,8 @@ The Index dimension is set to `primary` for the primary index and to the name of
 The Model is the single-table entity name. Read [DynamoDB Single Table Design](https://www.sensedeep.com/blog/posts/2021/dynamodb-singletable-design.html) for background on single table design patterns. The model name is determined based on the keys used or returned in the request. See below for Single Table Configuration.
 
 The operation dimension is set to the DynamoDB operation: getItem, putItem etc.
+
+You can tailor the set of dimensions via the `dimensions` constructor parameter.
 
 ## Single Table Configuration
 
@@ -227,7 +231,11 @@ Metrics can be dynamically controlled by the LOG_FILTER environment variable. If
 
 ## Profiling Queries
 
-You can also profile queries and scans by setting the `queries` parameter to true and passing a `profile` property to the relevant DynamoDB query or scan command. You can set this to any identifying string to describe the query or scan. These metrics are created under the Profile dimension. Note: the Profile dimension is separate and is not listed in the `dimensions` property.
+You can also profile queries and scans by setting the `queries` constructor parameter to true and passing a `profile` property to the relevant DynamoDB query or scan command. You can set the profile value to any identifying string to describe the query or scan.
+
+These profile metrics are created under the Profile dimension.
+
+Note: the Profile dimension is separate and is not listed in the `dimensions` constructor parameter.
 
 For example:
 
