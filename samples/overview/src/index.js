@@ -36,7 +36,15 @@ async function test() {
         },
     }).promise()
 
-    let items = await client.scan({
+    let items = await client.query({
+        TableName,
+        KeyConditionExpression: `pk = :pk`,
+        ExpressionAttributeValues: {':pk': 'User#42'},
+        Limit: 10,
+        profile: 'test-query',
+    }).promise()
+
+    items = await client.scan({
         TableName,
         Limit: 10,
     }).promise()
