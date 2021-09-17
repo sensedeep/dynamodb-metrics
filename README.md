@@ -302,4 +302,4 @@ You can contact me (Michael O'Brien) on Twitter at: [@mobstream](https://twitter
 
 ### SenseDeep
 
-Please try best way to monitor DynamoDB is via the Serverless Developer Studio [SenseDeep](https://www.sensedeep.com/).
+The best way to monitor DynamoDB is via the Serverless Developer Studio [SenseDeep](https://www.sensedeep.com/).
