@@ -150,7 +150,7 @@ If you are using a more complex scheme to encode your single-table entities, the
 ```javascript
 const metrics = new Metrics({
     indexes,
-    model(params, result) => {
+    model(operation, params, result) => {
         //  Custom logic to return the model name. For example:
         return Object.values(params.Item[hash])[0].split('#')[0]
     }
