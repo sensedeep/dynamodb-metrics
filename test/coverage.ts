@@ -37,7 +37,7 @@ test('Debug', async() => {
         indexes: Indexes,
         namespace: Namespace,
         test: true,
-        model: (params) => {
+        model: (operation, params, result) => {
             return 'User'
         }
     })

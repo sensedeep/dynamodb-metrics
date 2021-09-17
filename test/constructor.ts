@@ -38,7 +38,7 @@ test('Constructor', async() => {
         source: 'jest',
         test: true,
         separator: '#',
-        model: (params) => {
+        model: (operations, params, result) => {
             return 'User'
         }
     })

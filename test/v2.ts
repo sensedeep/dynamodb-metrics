@@ -51,7 +51,7 @@ test('V2 CRUD', async() => {
         source: 'jest',
         test: true,
         separator: '#',
-        model: (params) => {
+        model: (operation, params, result) => {
             return 'User'
         }
     })

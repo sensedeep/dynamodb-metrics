@@ -25,8 +25,9 @@ DynamoDB metrics was created for those with single-table DynamoDB designs who ne
 
 ## DynamoDB Metrics Features
 
-* Creates detailed CloudWatch metrics for Tables, Indexes, Apps/Functions, Entities and DynamoDB operations
+* Creates detailed CloudWatch metrics for Tables, Tenants, Indexes, Apps/Functions, Entities and DynamoDB operations
 * Emits metrics using [CloudWatch EMF](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch_Embedded_Metric_Format_Specification.html) for zero-latency metric creation.
+* Control which dimensions and additional properties are emitted in the EMF log data.
 * Supports AWS V2 and V3 SDKs.
 * Easy few line integration.
 * Very low CPU and memory impact.
@@ -103,7 +104,7 @@ DynamoDB Metrics creates the following metrics
 * scanned &mdash; Number of items scanned
 * requests &mdash; Number of API requests issued
 
-DynamoDB Metrics will create these metrics for the following dimensions by default:
+DynamoDB Metrics will create these metrics for the following dimensions:
 
 * Table
 * Tenant
@@ -111,6 +112,8 @@ DynamoDB Metrics will create these metrics for the following dimensions by defau
 * Index
 * Model
 * Operation
+
+The enabled dimensions by default are: Table, Source, Index, Model and Operation. You can vary the enabled dimensions via the `dimensions` constructor property.
 
 The Table dimension is set to the table Name.
 
@@ -218,11 +221,13 @@ const metrics = new Metrics({
     },
     max: 99,
     model: (operation, params, result) => {
-        return Object.values(params.Item[hash])[0].split('#')[0]
+        //  Determine the entity model from the API params
+        return Object.values(params.Item['pk'])[0].split('#')[0]
     },
     namespace: 'Acme/Launches',
     period: 15 * 1000,
     properties: (operation, params, result) => {
+        //  Additional properties to add to the EMF record
         return {color: 'red'}
     },
     queries: true,

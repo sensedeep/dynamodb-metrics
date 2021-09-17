@@ -36,13 +36,13 @@ test('Debug', async() => {
         dimensions: ['Table', 'Index', 'Model'],
         indexes: Indexes,
         max: 99,
-        model: (params) => {
+        model: (operations, params, result) => {
             return 'User'
         },
         namespace: Namespace,
         period: 15 * 1000,
         // properties: { color: 'blue' },
-        properties: (operation, params, result) => { 
+        properties: (operation, params, result) => {
             return {color: 'red' }
         },
         separator: '#',
