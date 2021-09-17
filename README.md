@@ -193,7 +193,7 @@ The Metrics constructor takes an options map parameter with the following proper
 | model | `function` | Set to a function to be invoked to determine the entity model name. Invoked as: `model(operation, params, result)`. Defaults to null.|
 | namespace | `string` | Namespace to use for the emitted metrics. Defaults to `SingleTable/Metrics.1`.|
 | period | `number` | Number of seconds to buffer metric events before flushing to stdout. Defaults to 30 seconds.|
-| properties | `map|function` | Set to a map of additional properties to be included in EMF log record. These are not metrics. Set to a function that will be invoked as `properties(operation, params, result)` and should return a map of properties. Defaults to null.|
+| properties | `map\|function` | Set to a map of additional properties to be included in EMF log record. These are not metrics. Set to a function that will be invoked as `properties(operation, params, result)` and should return a map of properties. Defaults to null.|
 | queries | `boolean` | Set to true to enable per-query profile metrics. Defaults to true.|
 | separator | `string` | Separator used between entity/model names in the hash and sort keys. Defaults to '#'.|
 | senselogs | `instance` | SenseLogs instance to use to emit the metrics. This permits dynamic control of metrics.|
