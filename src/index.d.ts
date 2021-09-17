@@ -5,15 +5,19 @@
 type ConstructorOptions = {
     chan?: string
     client?: {}
+    dimensions?: string[]
+    enable?: boolean
     indexes?: {}
     max?: number
-    model?: (params: {}) => string
+    model?: (operations: string, params: {}, result: {}) => string
     namespace?: string
     period?: number
-    senselogs?: {}
+    properties?: ((operations: string, params: {}, result: {}) => string) | {}
+    queries?: boolean
     separator?: string
+    senselogs?: {}
     source?: string
-
+    tenant?: string
     //  Internal only for test
     test?: boolean
 };
