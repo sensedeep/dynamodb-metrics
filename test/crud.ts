@@ -6,7 +6,7 @@ import {
     BatchWriteCommand, GetCommand, DeleteCommand, PutCommand, QueryCommand, ScanCommand, UpdateCommand
 } from './utils/init'
 
-// jest.setTimeout(7200 * 1000)
+jest.setTimeout(7200 * 1000)
 
 const Indexes = {
     primary: { hash: 'pk', sort: 'sk' },
@@ -73,13 +73,12 @@ test('Basic CRUD', async() => {
     let items: any = await client.send(new QueryCommand({
         TableName,
         KeyConditionExpression: `pk = :pk`,
-        ExpressionAttributeValues: {
-            ':pk': 'User#42'
-        }
-    }))
+        ExpressionAttributeValues: { ':pk': 'User#42' },
+        profile: 'my-profile',
+    } as any))
     expect(items.Items.length).toBe(1)
     output = await metrics.flush()
-    expect(output.length).toBe(5)
+    expect(output.length).toBe(6)
 
     //  Scan
     items = await client.send(new ScanCommand({ TableName }))

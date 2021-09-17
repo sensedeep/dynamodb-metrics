@@ -4,7 +4,7 @@
 
 const DefaultConfig = {
     chan: 'metrics',
-    dimensions: ['Table', 'Tenant', 'Source', 'Index', 'Model', 'Operation'],
+    dimensions: ['Table', 'Source', 'Index', 'Model', 'Operation'],
     enable: true,
     env: false,
     hot: false,
@@ -12,6 +12,7 @@ const DefaultConfig = {
     max: 100,                                                       //  Buffer metrics for 100 requests
     namespace: 'SingleTable/Metrics.1',                             //  Default custom metric namespace
     period: 30,                                                     //  or buffer for 30 seconds
+    properties: null,
     queries: true,
     separator: '#',
     source: process.env.AWS_LAMBDA_FUNCTION_NAME || 'Default',      //  Default source name
@@ -64,7 +65,7 @@ export default class Metrics {
 
         this.count = 0
         this.lastFlushed = Date.now()
-        this.tree = {}
+        this.counters = {}
 
         this.test = params.test
         if (this.test) {
@@ -80,16 +81,13 @@ export default class Metrics {
         if (!this.enable) {
             return
         }
+        this.properties = params.properties
+
         this.dimensions = params.dimensions
         //  LEGACY (was object)
         if (!Array.isArray(this.dimensions)) {
             this.dimensions = Object.keys(this.dimensions)
         }
-        this.dimensionMap = {}
-        for (let dim of this.dimensions) {
-            this.dimensionMap[dim] = true
-        }
-
         let client = this.client = params.client
         if (client.middlewareStack) {
             //  V3
@@ -152,7 +150,7 @@ export default class Metrics {
     }
 
     response(operation, params, result, started) {
-        let model = this.getModel(params, result)
+        let model = this.getModel(operation, params, result)
         let capacity = 0
         let tableName = params.TableName
         let consumed = result.ConsumedCapacity
@@ -169,118 +167,113 @@ export default class Metrics {
             }
         }
         let timestamp = Date.now()
+
+        //  Counter values
         let values = {
-            operation,
             count: result.Count || 1,
             scanned: result.ScannedCount || 1,
             latency: timestamp - started,
             capacity,
+            operation,
         }
+        /*
+            All possible dimensions. The this.dimensions will be the subset emitted as EMF dimensions.
+            The remainder will be emited as properties in the EMF record, but not EMF dimensions.
+        */
+        let dimensionValues = {
+            Table: tableName,
+            Tenant: this.tenant,
+            Source: this.source,
+            Index: params.IndexName || 'primary',
+            Model: model,
+            Operation: operation,
+        }
+        let properties
+        if (typeof this.properties == 'function') {
+            properties = this.properties(operation, params, result)
+        } else {
+            properties = this.properties || {}
+        }
+        this.addMetricGroup(values, dimensionValues, properties)
 
-        let dimensions = {}
-        let map = this.dimensionMap
-
-        if (map.Table) {
-            dimensions.Table = tableName
-        }
-        if (map.Tenant && this.tenant) {
-            dimensions.Tenant = this.tenant
-        }
-        if (map.Source && this.source) {
-            dimensions.Source = this.source
-        }
-        if (map.Index) {
-            dimensions.Index = params.IndexName || 'primary'
-        }
-        if (map.Model) {
-            dimensions.Model = model
-        }
-        if (map.Operation) {
-            dimensions.Operation = operation
-        }
-        //  FUTURE
         if (this.queries && params.profile) {
-            this.tree.Profile = this.tree.Profile || {}
-            this.addMetric(this.tree.Profile, values, 'Profile', params.profile)
+            // this.counters.Profile = this.counters.Profile || {}
+            dimensionValues.Profile = params.profile
+            this.addMetric('Profile', values, ['Profile'], dimensionValues, properties)
         }
-        this.addMetricGroup(this.tree, values, dimensions)
-
         if (++this.count >= this.max || (this.lastFlushed + this.period) < timestamp) {
-            this.flush(timestamp, this.tree)
+            this.flush(timestamp)
             this.count = 0
             this.lastFlushed = timestamp
         }
     }
 
-    addMetricGroup(tree, values, dimensions) {
+    /*
+        Perform an ordered aggregation of the values each level of the enabled dimensions
+    */
+    addMetricGroup(values, dimensionValues, properties) {
+        let dimensions = [], keys = []
         for (let name of this.dimensions) {
-            let dimension = dimensions[name]
+            let dimension = dimensionValues[name]
+            //  Skip the dimensions that have not been defined (Tenant, Source).
             if (dimension) {
-                tree = tree[name] = tree[name] || {}
-                this.addMetric(tree, values, name, dimension)
-                tree = tree[dimension]
+                keys.push(dimension)
+                dimensions.push(name)
+                this.addMetric(keys.join('.'), values, dimensions, dimensionValues, properties)
             }
         }
     }
 
-    addMetric(tree, values, name, dimension) {
-        let {operation, capacity, count, latency, scanned} = values
-        let item = tree[dimension] = tree[dimension] || {
-            counters: {count: 0, latency: 0, read: 0, requests: 0, scanned: 0, write: 0}
+    /*
+        Aggregate the metric values for a specific level of the dimension tree
+    */
+    addMetric(key, values, dimensions, dimensionValues, properties) {
+        let rec = this.counters[key] = this.counters[key] || {
+            totals: { count: 0, latency: 0, read: 0, requests: 0, scanned: 0, write: 0 },
+            dimensions: dimensions.slice(0),
+            dimensionValues,
+            properties,
         }
-        let counters = item.counters
-        counters[ReadWrite[operation]] += capacity      //  RCU, WCU
-        counters.latency += latency                     //  Latency in ms
-        counters.count += count                         //  Item count
-        counters.scanned += scanned                     //  Items scanned
-        counters.requests++                             //  Number of requests
+        let totals = rec.totals
+        totals[ReadWrite[values.operation]] += values.capacity    //  RCU, WCU
+        totals.latency += values.latency                          //  Latency in ms
+        totals.count += values.count                              //  Item count
+        totals.scanned += values.scanned                          //  Items scanned
+        totals.requests++                                         //  Number of requests
     }
 
-    flush(timestamp = Date.now(), tree = this.tree, dimensions = [], props = {}) {
+    flush(timestamp = Date.now()) {
         if (!this.enable) return
-        for (let [key, rec] of Object.entries(tree)) {
-            if (key == 'counters') {
-                if (rec.requests) {
-                    Object.keys(rec).forEach(key => rec[key] === 0 && delete rec[key])
-                    let rprops = Object.assign(props, rec)
-                    this.emitMetrics(timestamp, rprops, dimensions)
-                    rec.requests = rec.count = rec.scanned = rec.latency = rec.read = rec.write = 0
-                }
-            } else {
-                let dims = dimensions.slice(0)
-                dims.push(key)
-                for (let [name, tree] of Object.entries(rec)) {
-                    let rprops = Object.assign({}, props)
-                    rprops[key] = name
-                    this.flush(timestamp, tree, dims, rprops)
-                }
-            }
+        for (let [key, rec] of Object.entries(this.counters)) {
+            Object.keys(rec).forEach(field => rec[field] === 0 && delete rec[field])
+            this.emitMetrics(timestamp, rec)
         }
-        if (this.test && tree == this.tree) {
+        this.counters = {}
+        if (this.test) {
             let output = this.output
             this.output = []
             return output
         }
     }
 
-    emitMetrics(timestamp, values, dimensions = []) {
-        let requests = values.requests
+    emitMetrics(timestamp, rec) {
+        let {dimensionValues, dimensions, properties, totals} = rec
 
-        values.latency = values.latency / requests
-        values.count = values.count / requests
-        values.scanned = values.scanned / requests
+        let requests = totals.requests
+        totals.latency = totals.latency / requests
+        totals.count = totals.count / requests
+        totals.scanned = totals.scanned / requests
 
         if (this.log && this.log.emit) {
             //  Senselogs. Preferred as it can be dynamically controled.
             let chan = this.chan || 'metrics'
             this.log.metrics(chan, 'SingleTable Custom Metrics',
-                this.namespace, values, [dimensions], {latency: 'Milliseconds', default: 'Count'})
+                this.namespace, totals, dimensions, {latency: 'Milliseconds', default: 'Count'}, properties)
 
         } else {
-            let keys = Object.keys(values).filter(v => dimensions.indexOf(v) < 0)
-            let metrics = keys.map(v => {
-                return {Name: v, Unit: v == 'latency' ? 'Milliseconds' : 'Count'}
-            })
+            //  Dimensions is all possible dimension values. Find those that are enabled metric dimensions
+            let metrics = dimensions.map(v => {return {Name: v, Unit: v == 'latency' ? 'Milliseconds' : 'Count'}})
+
             let data = Object.assign({
                 _aws: {
                     Timestamp: timestamp,
@@ -290,7 +283,10 @@ export default class Metrics {
                         Metrics: metrics,
                     }]
                 },
-            }, values)
+            }, totals, dimensionValues, properties)
+
+            // console.log(JSON.stringify(data, null, 4))
+
             if (this.test) {
                 //  Capture just for testsing
                 this.output.push('SingleTable Custom Metrics ' + JSON.stringify(data) + '\n')
@@ -304,11 +300,11 @@ export default class Metrics {
         }
     }
 
-    getModel(params) {
+    getModel(operation, params, result) {
         const hash = this.indexes.primary.hash
         let model
         if (typeof this.model == 'function') {
-            model = this.model(params)
+            model = this.model(operation, params, result)
         } else if (this.separator) {
             if (params.Item) {
                 model = Object.values(params.Item[hash])[0].split(this.separator)[0]

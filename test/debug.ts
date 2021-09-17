@@ -33,16 +33,21 @@ test('Debug', async() => {
     const metrics = new Metrics({
         client,
         chan: 'metrics',
+        dimensions: ['Table', 'Index', 'Model'],
         indexes: Indexes,
         max: 99,
-        namespace: Namespace,
-        period: 15 * 1000,
-        source: 'jest',
-        test: true,
-        separator: '#',
         model: (params) => {
             return 'User'
-        }
+        },
+        namespace: Namespace,
+        period: 15 * 1000,
+        // properties: { color: 'blue' },
+        properties: (operation, params, result) => { 
+            return {color: 'red' }
+        },
+        separator: '#',
+        source: 'jest',
+        test: true,
     })
 
     await client.send(new PutCommand({
@@ -53,10 +58,11 @@ test('Debug', async() => {
             name: 'John Doe',
         },
     }))
+    let output = await metrics.flush()
 
     let items = await client.send(new ScanCommand({ TableName }))
 
-    let output = await metrics.flush()
+    output = await metrics.flush()
     expect(output.length > 1).toBe(true)
 })
 

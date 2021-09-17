@@ -33,7 +33,7 @@ DynamoDB metrics was created for those with single-table DynamoDB designs who ne
 * Supported by the free [SenseDeep Developer Plan](https://www.sensedeep.com/) for graphical DynamoDB single-table monitoring.
 * No dependencies.
 * Optionally integrates with [SenseLogs](https://www.npmjs.com/settings/sensedeep/packages) for dynamic control of metrics.
-* Clean, readable small code base (<300 lines).
+* Clean, readable small code base (<400 lines).
 * Full TypeScript support.
 
 ## Quick Tour
@@ -114,7 +114,7 @@ DynamoDB Metrics will create these metrics for the following dimensions by defau
 
 The Table dimension is set to the table Name.
 
-The Tenant dimension is defined via the `Metric` constructor `tenant` parameter. You can set this to any identifying string you like. It is typically set to your customer or tenant ID or name. If unset, it will not be used.
+The Tenant dimension is defined via the `Metric` constructor `tenant` parameter. You can set this to any identifying string you like. It is typically set to your customer or tenant ID or name. If unset, it will not be used. Be careful using Tenant with high cardinality data sets. See [Under the Hood](#under-the-hood) for managing CloudWatch metric costs.
 
 The Source dimension is defined via the `Metric` constructor `source` parameter. You can set this to any identifying string you like. It is typically set to your application or function name. If unset, it will default to the name of the executing Lambda function.
 
@@ -181,14 +181,16 @@ The Metrics constructor takes an options map parameter with the following proper
 | Property | Type | Description |
 | -------- | :--: | ----------- |
 | chan | `string` | If using SenseLogs, this will define the SenseLogs channel to use for the output.|
+| client | `DynamoDB client` | Set to an AWS V2 or V3 DynamoDB DocumentClient instance.|
 | dimensions | `array` | Ordered array of dimensions to emit. Defaults to [Table, Tenant, Source, Index, Model, Operation].|
 | enable | `boolean` | Set to true to enable metrics. Defaults to true.|
 | env | `boolean` | Set to true to enable dynamic control via the LOG_FILTER environment variable. Defaults to false.|
 | indexes | `map` | Map of indexes supported by the table. The map keys are the names of the indexes. The values are a map of 'hash' and 'sort' attribute names. Must always contain a `primary` element.|
 | max | `number` | Maximum number of metric events to buffer before flushing to stdout and on to CloudWatch EMF. Defaults to 100.|
-| model | `function` | Set to a function to be invoked to determine the entity model name. Invoked as: `model(params, result)`. Defaults to null.|
+| model | `function` | Set to a function to be invoked to determine the entity model name. Invoked as: `model(operation, params, result)`. Defaults to null.|
 | namespace | `string` | Namespace to use for the emitted metrics. Defaults to `SingleTable/Metrics.1`.|
 | period | `number` | Number of seconds to buffer metric events before flushing to stdout. Defaults to 30 seconds.|
+| properties | `map|function` | Set to a map of additional properties to be included in EMF log record. These are not metrics. Set to a function that will be invoked as `properties(operation, params, result)` and should return a map of properties. Defaults to null.|
 | queries | `boolean` | Set to true to enable per-query profile metrics. Defaults to true.|
 | separator | `string` | Separator used between entity/model names in the hash and sort keys. Defaults to '#'.|
 | senselogs | `instance` | SenseLogs instance to use to emit the metrics. This permits dynamic control of metrics.|
@@ -205,7 +207,7 @@ For example, every parameter in use:
 ```javascript
 const metrics = new Metrics({
     client,
-    dimensions: {Table: true, Source: true, Index: true, Model: true, Operations: true},
+    dimensions: ['Table', 'Source', 'Index', 'Model', 'Operations'],
     chan: 'metrics',
     enable: true,
     env: true,
@@ -215,15 +217,18 @@ const metrics = new Metrics({
         gs2: { hash: 'gs2pk', sort: 'gs2sk' }
     },
     max: 99,
+    model: (operation, params, result) => {
+        return Object.values(params.Item[hash])[0].split('#')[0]
+    },
     namespace: 'Acme/Launches',
     period: 15 * 1000,
+    properties: (operation, params, result) => {
+        return {color: 'red'}
+    },
     queries: true,
+    separator: '#',
     source: 'BigRocket',
     tenant: 'Customer-42',
-    separator: '#',
-    model: (params, result) => {
-        return Object.values(params.Item[hash])[0].split('#')[0]
-    }
 })
 ```
 
