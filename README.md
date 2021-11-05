@@ -1,6 +1,6 @@
 ![DynamoDB Metrics](https://www.sensedeep.com/images/metrics-logo.png)
 
-## Grok your DynamoDB Single Table designs!
+## Metrics for your DynamoDB Single Table designs!
 
 [![Build Status](https://img.shields.io/github/workflow/status/sensedeep/dynamodb-metrics/build)](https://img.shields.io/github/workflow/status/sensedeep/dynamodb-metrics/build)
 [![npm](https://img.shields.io/npm/v/dynamodb-metrics.svg)](https://www.npmjs.com/package/dynamodb-metrics)
@@ -270,9 +270,9 @@ let items = await client.send(new QueryCommand({
 
 The metric are emitted using the [CloudWatch EMF](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch_Embedded_Metric_Format_Specification.html) via the `metrics` method. This permits zero-latency creation of metrics without impacting the performance of you Lambdas.
 
-Metrics will only be emitted for dimension combinations that are active. If you have many application entities and indexes, you may end up with a large number of metrics. If your site uses all these dimensions actively, your CloudWatch Metric costs may be high. You will be charged by AWS CloudWatch for the total number of metrics that are active each hour at the rate of $0.30 cents per hour.
+Metrics will only be emitted for dimension combinations that are active. If you have many application entities and indexes, you may end up with a large number of metrics. If your site uses all these dimensions actively, your CloudWatch Metric costs may be high. You will be charged by AWS CloudWatch for the total number of metrics that are active each hour at the rate of $0.30 cents per hour per metric.
 
-If that is the case, you can minimize your cloud watch charges, by reducing the number of dimensions via the `dimensions` property. You could consider disabling the `source` or `operation` dimensions. Alternatively, you should consider [SenseLogs](https://www.npmjs.com/package/senselogs) which integrates with Metrics and can dynamically control your metrics to enable and disable metrics dynamically.
+If that is the case, you can minimize your cloud watch charges, by reducing the number of dimensions via the `dimensions` property. You could consider disabling the `source` or `operation` dimensions. Alternatively, you should consider using the LOG_FILTER environment variable or [SenseLogs](https://www.npmjs.com/package/senselogs) to dynamically control your metrics.
 
 DynamoDB Metrics are buffered and aggregated to minimize the load on your system. If a Lambda function is reclaimed by AWS Lambda, there may be a few metric requests that are not emitted before the function is reclaimed. This should be a very small percentage and should not significantly impact the quality of the metrics. You can control this buffering via the `max` and `period` parameters.
 
