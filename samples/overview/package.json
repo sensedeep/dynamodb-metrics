@@ -1,6 +1,6 @@
 {
-    "name": "onetable-sample-overview",
-    "description": "OneTable overview sample",
+    "name": "metrics-sample-overview",
+    "description": "metrics overview sample",
     "version": "1.0.0",
     "main": "index.js",
     "type": "module",
@@ -9,7 +9,7 @@
     },
     "license": "ISC",
     "dependencies": {
-        "dynamodb-metrics": "^0.5.0"
+        "dynamodb-metrics": "^1.0.0"
     },
     "devDependencies": {
         "typescript": "^4.3.4"
