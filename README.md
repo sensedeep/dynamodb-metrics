@@ -2,7 +2,7 @@
 
 ## Metrics for your DynamoDB Single Table designs!
 
-[![Build Status](https://img.shields.io/github/workflow/status/sensedeep/dynamodb-metrics/build)](https://img.shields.io/github/workflow/status/sensedeep/dynamodb-metrics/build)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/sensedeep/dynamodb-metrics/build.yml?branch=main)](https:// img.shields.io/github/actions/workflow/status/sensedeep/dynamodb-metrics/build.yml?branch=main)
 [![npm](https://img.shields.io/npm/v/dynamodb-metrics.svg)](https://www.npmjs.com/package/dynamodb-metrics)
 [![npm](https://img.shields.io/npm/l/dynamodb-metrics.svg)](https://www.npmjs.com/package/dynamodb-metrics)
 [![Coverage Status](https://coveralls.io/repos/github/sensedeep/dynamodb-metrics/badge.svg?branch=main)](https://coveralls.io/github/sensedeep/dynamodb-metrics?branch=main)
